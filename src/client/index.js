@@ -84,11 +84,11 @@ function fetchPreview(sessionId) {
  * Data comes from the framework hooks (`useSessions`, `useWorkspaces`)
  * provided as standard props by the sidebar footer slot.
  */
-function ArchivedAction(props, translate) {
+function ArchivedAction(props) {
   const wide = props.wide === true
   const useSessions = props.useSessions
   const useWorkspaces = props.useWorkspaces
-  const t = translate
+  const t = props.t
   const archivedIds = useWorkspaces((state) => state.archivedSessionIds)
   const byId = useSessions((state) => state.byId)
   const [open, setOpen] = React.useState(false)
@@ -309,8 +309,9 @@ function apply(ctx) {
     name: 'sidebar.footer.action',
     id: 'archived-conversations',
     order: 30,
+    locale: 'archived-conversations',
     label: () => translate('label'),
-  }, (props) => React.createElement(ArchivedAction, props, translate))), 'dsh-archived-conversations: footer action')
+  }, (props) => React.createElement(ArchivedAction, props))), 'dsh-archived-conversations: footer action')
 }
 
 module.exports = { apply, inject }
