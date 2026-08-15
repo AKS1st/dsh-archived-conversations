@@ -1,0 +1,55 @@
+{
+  "name": "@dsh-external/dsh-archived-conversations",
+  "version": "0.1.0",
+  "description": "Show archived conversations in the DSH Web sidebar footer with read-only message previews.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AKS1st/dsh-archived-conversations.git"
+  },
+  "main": "./lib/index.js",
+  "types": "./lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsdown -c tsdown.config.mjs",
+    "check": "tsc -p tsconfig.json --noEmit --pretty false",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "dsh-plugin",
+    "web-ui",
+    "archived",
+    "conversations"
+  ],
+  "license": "MIT"
+}

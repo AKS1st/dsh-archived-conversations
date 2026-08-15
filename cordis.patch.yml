@@ -1,0 +1,5 @@
+# dsh-archived-conversations: show archived conversations with read-only previews.
+# Inserted into the web profile by `dsh plugin --profile web add <this repo>`.
+- insert:
+    - id: archived-conversations
+      name: '@dsh-external/dsh-archived-conversations'
