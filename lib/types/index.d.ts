@@ -10,7 +10,8 @@
  * Security posture:
  * - The preview route only answers for session ids that are IN the registry's
  *   archived set (an IDOR guard: live/active sessions are never readable).
- * - The session id is validated as a UUID-shaped string before use.
+ * - The session id is validated as a DSH session-id-shaped string
+ *   (`session-` prefix + uuid/counter) before use.
  * - The session log is read through the unified `sessionQuery` service
  *   (live-preferred, falls back to persistence), but only the most recent
  *   user/assistant text messages are extracted, each truncated to 400 chars,
