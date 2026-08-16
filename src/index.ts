@@ -10,7 +10,8 @@
  * Security posture:
  * - The preview route only answers for session ids that are IN the registry's
  *   archived set (an IDOR guard: live/active sessions are never readable).
- * - The session id is validated as a UUID-shaped string before use.
+ * - The session id is validated as a DSH session-id-shaped string
+ *   (`session-` prefix + uuid/counter) before use.
  * - The session log is read through the unified `sessionQuery` service
  *   (live-preferred, falls back to persistence), but only the most recent
  *   user/assistant text messages are extracted, each truncated to 400 chars,
@@ -36,8 +37,13 @@ export const inject = ['webServer']
 const MAX_MESSAGES = 6
 /** Per-message text cap (UTF-16 code units). */
 const MAX_TEXT = 400
-/** UUID v4 shape (also matches the wire SessionId brand). */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/**
+ * DSH session id shape: `session-` prefix + UUID (with or without dashes) or
+ * a numeric counter — the forms the session store mints (api-proxy, core
+ * session, subagent/sdk). Bounded and cheap; the IDOR guard (registry
+ * membership) is the real authorization.
+ */
+const SESSION_ID_RE = /^session-(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{32}|\d+)$/i
 
 /** Fixed user-facing error texts (never leak internals). */
 const ERR_BAD_REQUEST = 'invalid request'
@@ -151,12 +157,12 @@ function sendJson(res: ServerResponse, data: unknown, status = 200): void {
   res.end(text)
 }
 
-/** Parse a bounded query string for the sessionId parameter (UUID shape only). */
+/** Parse a bounded query string for the sessionId parameter (DSH id shape only). */
 function sessionIdFrom(url: string | undefined): string | null {
   if (url === undefined) return null
   const parsed = new URL(url, 'http://dsh.local')
   const value = parsed.searchParams.get('sessionId')
-  return typeof value === 'string' && UUID_RE.test(value) ? value : null
+  return typeof value === 'string' && SESSION_ID_RE.test(value) ? value : null
 }
 
 /**

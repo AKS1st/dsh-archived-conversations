@@ -21,7 +21,7 @@ DSH 产品有意禁止打开归档会话：客户端 `workspaces` 服务有一�
 本插件的预览路由在发布前经过独立安全审核，并做了如下加固：
 
 - **IDOR 防护**：预览路由只在 `sessionId` 属于 registry 归档集合（`workspaceRegistry.archivedSessionIds`）时才响应，活动会话、子代理会话一律不可读（404）；
-- **会话 id 校验**：`sessionId` 必须是 UUID 形态字符串，否则拒绝；
+- **会话 id 校验**：`sessionId` 必须是 DSH 会话 id 形态（`session-` 前缀 + UUID/计数器），否则拒绝；
 - **最小数据**：只返回最近 6 条、每条 ≤400 字符的纯文本消息；不返回推理内容、工具调用、文件内容或完整日志；
 - **XSS 安全**：消息文本在浏览器端以 React 文本节点渲染（自动转义，无 `innerHTML`/`dangerouslySetInnerHTML`）；
 - **固定错误文案**：错误响应使用固定文本，不泄露内部错误细节、堆栈或路径；
