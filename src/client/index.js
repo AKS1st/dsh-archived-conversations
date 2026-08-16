@@ -1,11 +1,12 @@
 /**
  * dsh-archived-conversations — browser half (client plugin module).
  *
- * Adds an "Archived" entry to the sidebar footer action row
- * (`sidebar.footer.action`). Clicking it opens a panel listing every archived
- * conversation (title + relative time); clicking one fetches a read-only text
- * preview from the host half (`GET /__archived-conversations/preview`) and
- * shows the most recent user/assistant messages.
+ * Adds an "Archived" page to the DSH Web settings panel
+ * (`settings.section`, id `archived-conversations`). The page lists every
+ * archived conversation (title + relative time + count); clicking one
+ * fetches a read-only text preview from the host half
+ * (`GET /__archived-conversations/preview`) and shows the most recent
+ * user/assistant messages, with a back button to return to the list.
  *
  * The product intentionally forbids opening archived sessions (an archived
  * current selection is immediately cleared back to the New Session view), and
@@ -23,7 +24,7 @@ const API_PREVIEW = '/__archived-conversations/preview'
 
 const ZH = {
   'label': '已归档',
-  'aria.open': '显示已归档对话',
+  'nav': '已归档对话',
   'title': '已归档对话',
   'empty': '暂无已归档对话',
   'back': '返回列表',
@@ -40,7 +41,7 @@ const ZH = {
 }
 const EN = {
   'label': 'Archived',
-  'aria.open': 'Show archived conversations',
+  'nav': 'Archived conversations',
   'title': 'Archived conversations',
   'empty': 'No archived conversations',
   'back': 'Back to list',
@@ -80,22 +81,19 @@ function fetchPreview(sessionId) {
 }
 
 /**
- * The sidebar-footer entry: trigger button + panel (list / preview).
+ * The settings-page entry: list / preview for the archived conversations.
  * Data comes from the framework hooks (`useSessions`, `useWorkspaces`)
- * provided as standard props by the sidebar footer slot.
+ * provided as standard props by the settings section slot.
  */
-function ArchivedAction(props) {
-  const wide = props.wide === true
+function ArchivedSection(props) {
   const useSessions = props.useSessions
   const useWorkspaces = props.useWorkspaces
   const t = props.t
   const archivedIds = useWorkspaces((state) => state.archivedSessionIds)
   const byId = useSessions((state) => state.byId)
-  const [open, setOpen] = React.useState(false)
   const [selectedId, setSelectedId] = React.useState(null)
   const [preview, setPreview] = React.useState(null)
   const [loading, setLoading] = React.useState(false)
-  const rootRef = React.useRef(null)
 
   const rows = React.useMemo(() => {
     const result = []
@@ -110,25 +108,6 @@ function ArchivedAction(props) {
     result.sort((a, b) => b.updatedAt - a.updatedAt)
     return result
   }, [archivedIds, byId])
-
-  React.useEffect(() => {
-    if (!open) return
-    const closeOutside = (event) => {
-      if (event.target instanceof Node && !(rootRef.current !== null && rootRef.current.contains(event.target))) {
-        setOpen(false)
-      }
-    }
-    const onKeyDown = (event) => {
-      if (event.key !== 'Escape') return
-      setOpen(false)
-    }
-    document.addEventListener('pointerdown', closeOutside)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', closeOutside)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
 
   const openPreview = (id) => {
     setSelectedId(id)
@@ -154,60 +133,45 @@ function ArchivedAction(props) {
     ? (typeof preview.error === 'string' ? preview.error : t('preview.error'))
     : null
 
-  return React.createElement('div', { ref: rootRef, className: wide ? 'dsa-root' : 'dsa-root dsa-rail' },
-    React.createElement('button', {
-      type: 'button',
-      className: 'dsa-trigger',
-      'aria-expanded': open,
-      'aria-haspopup': 'dialog',
-      'aria-label': t('aria.open'),
-      'data-active': open || undefined,
-      onClick: () => { setOpen((v) => !v) },
-    },
-      React.createElement('span', { className: 'dsa-label' }, t('label')),
-      count > 0 ? React.createElement('span', { className: 'dsa-count' }, String(count)) : null,
+  return React.createElement('div', { className: 'dsa-section' },
+    React.createElement('div', { className: 'dsa-header' },
+      selectedId !== null
+        ? React.createElement('button', { type: 'button', className: 'dsa-back', onClick: backToList }, t('back'))
+        : null,
+      React.createElement('span', { className: 'dsa-title' },
+        selectedId !== null && selected !== undefined ? selected.title : t('title')),
+      selectedId === null ? React.createElement('span', { className: 'dsa-count' }, String(count)) : null,
     ),
-    open
-      ? React.createElement('div', { className: 'dsa-panel', role: 'dialog', 'aria-label': t('title') },
-        React.createElement('div', { className: 'dsa-header' },
-          selectedId !== null
-            ? React.createElement('button', { type: 'button', className: 'dsa-back', onClick: backToList }, t('back'))
-            : null,
-          React.createElement('span', { className: 'dsa-title' },
-            selectedId !== null && selected !== undefined ? selected.title : t('title')),
-        ),
-        React.createElement('div', { className: 'dsa-body' },
-          selectedId === null
-            ? (rows.length === 0
-              ? React.createElement('div', { className: 'dsa-empty' }, t('empty'))
-              : React.createElement('ul', { className: 'dsa-list' },
-                rows.map((row) => React.createElement('li', { key: row.id },
-                  React.createElement('button', {
-                    type: 'button',
-                    className: 'dsa-row',
-                    onClick: () => openPreview(row.id),
-                  },
-                    React.createElement('span', { className: 'dsa-rowTitle', title: row.title }, row.title),
-                    React.createElement('span', { className: 'dsa-rowTime' }, relativeTime(row.updatedAt, now, t)),
-                  ),
+    React.createElement('div', { className: 'dsa-body' },
+      selectedId === null
+        ? (rows.length === 0
+          ? React.createElement('div', { className: 'dsa-empty' }, t('empty'))
+          : React.createElement('ul', { className: 'dsa-list' },
+            rows.map((row) => React.createElement('li', { key: row.id },
+              React.createElement('button', {
+                type: 'button',
+                className: 'dsa-row',
+                onClick: () => openPreview(row.id),
+              },
+                React.createElement('span', { className: 'dsa-rowTitle', title: row.title }, row.title),
+                React.createElement('span', { className: 'dsa-rowTime' }, relativeTime(row.updatedAt, now, t)),
+              ),
+            )),
+          ))
+        : (loading
+          ? React.createElement('div', { className: 'dsa-loading' }, '…')
+          : previewError !== null
+            ? React.createElement('div', { className: 'dsa-error' }, previewError)
+            : messages.length === 0
+              ? React.createElement('div', { className: 'dsa-empty' }, t('preview.empty'))
+              : React.createElement('div', { className: 'dsa-preview' },
+                messages.map((msg, index) => React.createElement('div', { key: String(index), className: 'dsa-msg' },
+                  React.createElement('span', { className: 'dsa-msgRole' },
+                    msg.role === 'user' ? t('role.user') : t('role.assistant')),
+                  React.createElement('span', { className: 'dsa-msgText' }, String(msg.text)),
                 )),
-              ))
-            : (loading
-              ? React.createElement('div', { className: 'dsa-loading' }, '…')
-              : previewError !== null
-                ? React.createElement('div', { className: 'dsa-error' }, previewError)
-                : messages.length === 0
-                  ? React.createElement('div', { className: 'dsa-empty' }, t('preview.empty'))
-                  : React.createElement('div', { className: 'dsa-preview' },
-                    messages.map((msg, index) => React.createElement('div', { key: String(index), className: 'dsa-msg' },
-                      React.createElement('span', { className: 'dsa-msgRole' },
-                        msg.role === 'user' ? t('role.user') : t('role.assistant')),
-                      React.createElement('span', { className: 'dsa-msgText' }, String(msg.text)),
-                    )),
-                  )),
-        ),
-      )
-    : null,
+              )),
+    ),
   )
 }
 
@@ -215,7 +179,7 @@ function ArchivedAction(props) {
 const inject = ['slots']
 
 /**
- * Plugin body: register the footer action entry and its styles.
+ * Plugin body: register the settings section entry and its styles.
  * @param ctx - client context (slots, locale).
  */
 function apply(ctx) {
@@ -239,44 +203,22 @@ function apply(ctx) {
   ctx.effect(() => {
     const styleEl = document.createElement('style')
     styleEl.textContent = `
-.dsa-root { position: relative; flex: none; display: flex; align-items: center; width: 100%; height: 49px; margin: 8px 0 0; }
-.dsa-root.dsa-rail { width: 36px; height: 36px; margin: 0; }
-.dsa-trigger {
-  display: inline-flex; align-items: center; gap: 8px;
-  width: 100%; height: 49px; padding: 0 8px 0 6px;
-  border: none; border-radius: 12px; background: transparent;
-  color: var(--dsw-alias-label-primary); font-family: inherit; font-size: 14px;
-  cursor: pointer; overflow: hidden;
-}
-.dsa-trigger:hover { background: var(--dsw-alias-interactive-bg-hover-solid); }
-.dsa-trigger[data-active] { background: var(--dsw-alias-interactive-bg-hover); }
-.dsa-root.dsa-rail .dsa-trigger {
-  justify-content: center; gap: 0; width: 36px; height: 36px; padding: 0; border-radius: 50%; font-size: 12px;
-}
-.dsa-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dsa-count { flex: none; margin-left: auto; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
-.dsa-root.dsa-rail .dsa-count { display: none; }
-.dsa-panel {
-  position: fixed; left: 12px; bottom: 128px; z-index: 30;
-  display: flex; flex-direction: column;
-  width: 380px; max-width: calc(100vw - 24px); max-height: 60vh;
-  overflow: hidden; border: 1px solid var(--dsw-alias-border-l1); border-radius: 12px;
-  background: var(--dsw-alias-bg-base); box-shadow: var(--dsw-shadow-lv2);
-  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
-  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
-}
+.dsa-section { display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box; }
 .dsa-header {
   flex: none; display: flex; align-items: center; gap: 8px;
-  min-height: 44px; padding: 10px 12px; box-sizing: border-box;
-  border-bottom: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-base);
+  min-height: 40px; padding: 0 2px; box-sizing: border-box;
 }
 .dsa-back {
   flex: none; padding: 2px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px;
   background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 11px; cursor: pointer;
 }
 .dsa-back:hover { background: var(--dsw-alias-interactive-bg-hover); }
-.dsa-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 20px; color: var(--dsw-alias-label-primary); }
-.dsa-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 12px; }
+.dsa-title {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13px; font-weight: 500; line-height: 20px; color: var(--dsw-alias-label-primary);
+}
+.dsa-count { flex: none; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.dsa-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 2px 12px; }
 .dsa-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .dsa-row {
   display: flex; align-items: center; gap: 8px; box-sizing: border-box;
@@ -305,13 +247,13 @@ function apply(ctx) {
   const slots = ctx.get('slots')
   if (slots === undefined) return
 
-  ctx.effect(() => slots.inject('sidebar.footer.action', () => slots.register({
-    name: 'sidebar.footer.action',
+  ctx.effect(() => slots.inject('settings.section', () => slots.register({
+    name: 'settings.section',
     id: 'archived-conversations',
     order: 30,
+    label: () => translate('nav'),
     locale: 'archived-conversations',
-    label: () => translate('label'),
-  }, (props) => React.createElement(ArchivedAction, props))), 'dsh-archived-conversations: footer action')
+  }, (props) => React.createElement(ArchivedSection, props))), 'dsh-archived-conversations: settings section')
 }
 
 module.exports = { apply, inject }

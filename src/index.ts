@@ -4,7 +4,7 @@
  * The web UI hides archived sessions from every grouping surface on purpose
  * ("a hidden row must not stay open behind the list"), and there is no
  * unarchive API yet. This plugin therefore offers a read-only preview of the
- * archived conversations: the sidebar footer entry lists archived session ids,
+ * archived conversations: the settings page entry lists archived session ids,
  * and clicking one fetches a short text preview served by this host half.
  *
  * Security posture:
@@ -17,7 +17,7 @@
  *   user/assistant text messages are extracted, each truncated to 400 chars,
  *   at most 6 returned — the minimal data the browser UI needs, never the
  *   full log. (A full-log read is only reachable for already-archived ids,
- *   which the same browser user already lists in the sidebar.)
+ *   which the same browser user already lists in the settings page.)
  * - Error responses use fixed text; internal error details are never echoed.
  *
  * Endpoint: GET /__archived-conversations/preview?sessionId=<id>
