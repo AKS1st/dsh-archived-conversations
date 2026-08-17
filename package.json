@@ -1,6 +1,6 @@
 {
-  "name": "@dsh-external/dsh-archived-conversations",
-  "version": "0.2.0",
+  "name": "dsh-archived-conversations",
+  "version": "0.3.0",
   "description": "Show archived conversations in the DSH Web settings page with read-only message previews.",
   "type": "module",
   "repository": {

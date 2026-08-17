@@ -1,4 +1,4 @@
-const id = '@dsh-external/dsh-archived-conversations'
+const id = 'dsh-archived-conversations'
 
 export default [{
   entry: ['lib/types/index.js'],

@@ -2,4 +2,4 @@
 # Inserted into the web profile by `dsh plugin --profile web add <this repo>`.
 - insert:
     - id: archived-conversations
-      name: '@dsh-external/dsh-archived-conversations'
+      name: 'dsh-archived-conversations'
