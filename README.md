@@ -26,9 +26,10 @@ DSH 产品有意禁止打开归档会话：客户端 `workspaces` 服务有一�
 - **XSS 安全**：消息文本在浏览器端以 React 文本节点渲染（自动转义，无 `innerHTML`/`dangerouslySetInnerHTML`）；
 - **固定错误文案**：错误响应使用固定文本，不泄露内部错误细节、堆栈或路径；
 - **响应头**：`Cache-Control: no-store` + `X-Content-Type-Options: nosniff`；
+- **请求来源**：只接受 loopback socket、loopback `Host`，并拒绝跨站 Fetch Metadata、跨源 `Origin`/`Referer`；
 - **不携带凭据**：插件不读取、不发送任何文件、凭据或系统信息；路由只读、同源。
 
-> 说明：路由本身是 DSH 静态插件与 Host 通信的标准模式（`webServer.register` + fetch，与 `dsh-mermaid` 等社区插件一致）。DSH web 服务默认绑定 `127.0.0.1`（仅本机可达）。若部署方将 web 端口暴露到局域网/公网，请确保访问层有独立的认证与网络策略。
+> 说明：路由本身是 DSH 静态插件与 Host 通信的标准模式（`webServer.register` + fetch，与 `dsh-mermaid` 等社区插件一致）。预览路由即使 webServer 绑定 `0.0.0.0` 也只服务 loopback 请求；这不是认证层。
 
 ## 安装
 

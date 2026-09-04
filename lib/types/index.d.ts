@@ -8,6 +8,8 @@
  * and clicking one fetches a short text preview served by this host half.
  *
  * Security posture:
+ * - The preview route accepts only loopback sockets and loopback Host authorities;
+ *   cross-site Fetch Metadata and mismatched Origin/Referer headers are rejected.
  * - The preview route only answers for session ids that are IN the registry's
  *   archived set (an IDOR guard: live/active sessions are never readable).
  * - The session id is validated as a DSH session-id-shaped string
@@ -33,6 +35,8 @@ export declare const inject: string[];
 interface ArchivedHostContext {
     get(name: string): unknown;
     webServer: {
+        /** Current webServer contract: the configured bind host, not a request authority. */
+        host: '127.0.0.1' | '0.0.0.0';
         register(route: {
             kind: 'exact' | 'prefix';
             path: string;
@@ -44,5 +48,7 @@ interface ArchivedHostContext {
  * Plugin body: register the preview route.
  * @param ctx - host context.
  */
-export declare function apply(ctx: ArchivedHostContext): void;
+export declare function apply(ctx: ArchivedHostContext & {
+    effect(setup: () => (() => void), label?: string): void;
+}): void;
 export {};

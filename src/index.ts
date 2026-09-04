@@ -8,6 +8,8 @@
  * and clicking one fetches a short text preview served by this host half.
  *
  * Security posture:
+ * - The preview route accepts only loopback sockets and loopback Host authorities;
+ *   cross-site Fetch Metadata and mismatched Origin/Referer headers are rejected.
  * - The preview route only answers for session ids that are IN the registry's
  *   archived set (an IDOR guard: live/active sessions are never readable).
  * - The session id is validated as a DSH session-id-shaped string
@@ -65,6 +67,8 @@ interface SessionQueryLike {
 interface ArchivedHostContext {
   get(name: string): unknown
   webServer: {
+    /** Current webServer contract: the configured bind host, not a request authority. */
+    host: '127.0.0.1' | '0.0.0.0'
     register(route: {
       kind: 'exact' | 'prefix'
       path: string
@@ -177,15 +181,67 @@ function isArchived(ctx: ArchivedHostContext, sessionId: string): boolean {
   return registry.archivedSessionIds.includes(sessionId)
 }
 
+function isLoopbackAddress(address: string | undefined): boolean {
+  if (address === undefined) return false
+  if (address === '::1' || address === '0:0:0:0:0:0:0:1') return true
+  if (address.startsWith('::ffff:')) address = address.slice('::ffff:'.length)
+  const octets = address.split('.')
+  return octets.length === 4 && octets[0] === '127'
+    && octets.slice(1).every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '[::1]'
+    || (hostname.startsWith('127.') && hostname.slice(4).split('.').length === 3
+      && hostname.slice(4).split('.').every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255))
+}
+
+/** Reject remote sockets, DNS-rebinding Hosts, and cross-origin browser markers. */
+function isTrustedRequest(ctx: ArchivedHostContext, req: IncomingMessage): boolean {
+  // The current webServer contract exposes the bind host; regardless of whether
+  // it binds loopback or all interfaces, this private preview stays loopback-only.
+  if (ctx.webServer.host !== '127.0.0.1' && ctx.webServer.host !== '0.0.0.0') return false
+  if (!isLoopbackAddress(req.socket.remoteAddress)) return false
+  const host = req.headers.host
+  if (host === undefined) return false
+  let hostUrl: URL
+  try {
+    hostUrl = new URL(`http://${host}`)
+  } catch {
+    return false
+  }
+  if (!isLoopbackHostname(hostUrl.hostname)) return false
+  if (req.headers['sec-fetch-site'] === 'cross-site') return false
+  const requestMarkerMatches = (marker: string): boolean => {
+    try {
+      const markerUrl = new URL(marker)
+      return markerUrl.protocol === hostUrl.protocol && markerUrl.host === hostUrl.host
+    } catch {
+      return false
+    }
+  }
+  const origin = req.headers.origin
+  if (origin !== undefined && !requestMarkerMatches(origin)) return false
+  const referer = req.headers.referer
+  if (referer !== undefined && !requestMarkerMatches(referer)) return false
+  return true
+}
+
 /**
  * Plugin body: register the preview route.
  * @param ctx - host context.
  */
-export function apply(ctx: ArchivedHostContext): void {
-  ctx.webServer.register({
+export function apply(ctx: ArchivedHostContext & {
+  effect(setup: () => (() => void), label?: string): void
+}): void {
+  ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: '/__archived-conversations/preview',
     handler: (req: IncomingMessage, res: ServerResponse): void => {
+      if (!isTrustedRequest(ctx, req)) {
+        sendJson(res, { ok: false, error: ERR_BAD_REQUEST }, 403)
+        return
+      }
       if (req.method !== 'GET') {
         sendJson(res, { ok: false, error: ERR_BAD_REQUEST }, 405)
         return
@@ -210,5 +266,5 @@ export function apply(ctx: ArchivedHostContext): void {
         () => { sendJson(res, { ok: false, error: ERR_INTERNAL }, 500) },
       )
     },
-  })
+  }), 'archived-conversations: preview route')
 }
