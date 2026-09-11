@@ -27,6 +27,7 @@ const ZH = {
   'nav': '已归档对话',
   'title': '已归档对话',
   'empty': '暂无已归档对话',
+  'hint': '当前版本只支持只读预览，DSH 尚未提供取消归档接口，无法把对话移出归档。',
   'back': '返回列表',
   'preview.empty': '该对话没有可显示的文本消息',
   'preview.error': '无法读取该对话内容',
@@ -44,6 +45,7 @@ const EN = {
   'nav': 'Archived conversations',
   'title': 'Archived conversations',
   'empty': 'No archived conversations',
+  'hint': 'Read-only preview only: DSH has no unarchive API yet, so conversations cannot be moved out of the archive.',
   'back': 'Back to list',
   'preview.empty': 'This conversation has no displayable text',
   'preview.error': 'Could not read this conversation',
@@ -143,6 +145,10 @@ function ArchivedSection(props) {
       selectedId === null ? React.createElement('span', { className: 'dsa-count' }, String(count)) : null,
     ),
     React.createElement('div', { className: 'dsa-body' },
+      // Persistent capability notice: no unarchive API exists yet, so the
+      // affordance is deliberately absent. Stating the limit up front is what
+      // stops a user from archiving a conversation they expect to get back.
+      React.createElement('div', { className: 'dsa-hint' }, t('hint')),
       selectedId === null
         ? (rows.length === 0
           ? React.createElement('div', { className: 'dsa-empty' }, t('empty'))
@@ -219,6 +225,11 @@ function apply(ctx) {
 }
 .dsa-count { flex: none; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
 .dsa-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 2px 12px; }
+.dsa-hint {
+  margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px; background: var(--dsw-alias-fill-l2);
+  color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px;
+}
 .dsa-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .dsa-row {
   display: flex; align-items: center; gap: 8px; box-sizing: border-box;

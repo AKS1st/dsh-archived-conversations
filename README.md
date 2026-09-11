@@ -7,9 +7,16 @@
 DSH 产品有意禁止打开归档会话：客户端 `workspaces` 服务有一条强制规则——归档会话一旦成为当前会话就被立即清除回"新对话"状态（"隐藏的行不能保持打开"），且当前 Host 端**没有取消归档（unarchive）API**。因此本插件不尝试打开或恢复归档会话，而是提供安全的只读预览：
 
 - 入口在**设置**面板（`settings.section`，id `archived-conversations`，导航项"已归档对话"）；
+- 页面顶部固定一行**能力提示**：当前不支持取消归档（原因见下），避免用户在不知情的情况归档后无法取回；
 - 页面列出所有已归档对话（标题 + 相对时间 + 数量徽标）；
 - 点击某条 → Host 读取该会话日志，提取**最近 6 条**用户/助手文本消息（每条截断 400 字符）返回展示；
 - 完全不切换当前会话、不修改任何状态、不暴露完整日志。
+
+### 为什么现在不能"移出归档"
+
+DSH 目前没有取消归档 API：`workspace-controller` 只暴露 `@Remote('archiveSession')`，全仓无 `unarchiveSession` / `removeArchivedSession`。且插件侧**无法自行实现**——`WorkspaceRegistry.setState` 与 `enqueueOperation` 都是 `private`，registry 的公开写入口只有 `archiveSession`，没有可安全移除元素的公开方法。绕过私有方法直接写权威 domain state 会与 registry 的写队列和 `pendingMutation` 恢复逻辑并发竞争，等于让插件成为状态的第二个 owner，因此本插件不做这件事。
+
+好消息是 harness 侧留了门：`workspaceDomainSpec` 的注释明确写着 *"an archived session keeps its `sessionIds` slot (unarchiving must restore the position)"*，所以一旦上游补上 `unarchiveSession`，恢复后位置可以还原。参见 issue #2。
 
 ## 工作方式
 
